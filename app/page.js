@@ -1,95 +1,96 @@
-import Image from 'next/image'
-import styles from './page.module.css'
+'use client'
+// Import Next.js and other necessary modules
+import { useEffect, useState } from 'react';
+import Head from 'next/head';
+
+let tmImage;
+if (typeof window !== 'undefined') {
+  tmImage = require('@teachablemachine/image');
+}
 
 export default function Home() {
+  const [model, setModel] = useState(null);
+  const [predictions, setPredictions] = useState([]);
+
+  const colors = ['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'violet'];
+
+  useEffect(() => {
+    async function loadModel() {
+      const URL = 'https://teachablemachine.withgoogle.com/models/OKsEBZLb6/';
+      const modelURL = `${URL}model.json`;
+      const metadataURL = `${URL}metadata.json`;
+
+      const model = await tmImage.load(modelURL, metadataURL);
+      setModel(model);
+    }
+
+    if (tmImage) {
+      loadModel();
+    }
+  }, []);
+
+  async function predict() {
+    if (!model) {
+      console.error('Model is not loaded');
+      return;
+    }
+
+    const image = document.getElementById('upload-image');
+    const prediction = await model.predict(image, false);
+    
+    setPredictions(prediction.map(p => ({
+      className: p.className,
+      probability: p.probability.toFixed(2),
+    })));
+  }
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      document.getElementById('upload-image').src = e.target.result;
+      predict();
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>app/page.js</code>
-        </p>
+    <>
+      <Head>
+        <title>관상을 통한 롤 라인 추천기</title>
+      </Head>
+      <div style={{ textAlign: 'center', padding: '20px', backgroundColor: 'black' , color: 'white'}}>
+        <h1>관상을 통한 롤 라인 추천기</h1>
+        <p>예측을 위해 얼굴을 업로드해보시오</p>
+        <div id="fileInput-wrapper">
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        이미지 업로드
+        <input type="file" id="fileInput" onChange={handleImageUpload} />
+      </div>
+      
+        <br />
+        <img id="upload-image" src="./fakerganji.jpg" height="180px" alt="your image" style={{ marginTop: '20px' }}/>
+        <h2>예측결과</h2>
         <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+          {predictions.map((prediction, index) => (
+            <div key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+              <span style={{ width: '100px' }}>{prediction.className}</span>
+              <div className={`prediction-bar prediction-bar-${index}`} style={{
+              height: '24px',
+              width: `${prediction.probability * 100}%`,
+              color: 'white',
+              textAlign: 'right',
+              padding: '0 5px'
+            }}>
+                {prediction.probability}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
-
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore the Next.js 13 playground.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  )
+    </>
+  );
 }
